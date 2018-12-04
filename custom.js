@@ -182,8 +182,8 @@ app.custom.gridTasks = {
     }
 };
 
-app.events.subscribe('dynamicPageReady', function () {
-    console.log('dynamicPageReady Event', 'Triggered at ' + performance.now());
+app.events.subscribe("dynamicPageReady", function () {
+    console.log("dynamicPageReady Event", "Triggered at " + performance.now());
     if (app.custom.gridTasks.built) {
         return;
     }
@@ -261,7 +261,7 @@ app.events.subscribe('dynamicPageReady', function () {
                 data.gridData.clearSelection();
                 data.gridData.select(data.itemRowEle);
 
-                var assignToAnalystByGroupButton = $('li[data-bind*="click: analystByGroup"]').first();
+                var assignToAnalystByGroupButton = $("li[data-bind*='click: analystByGroup']").first();
 
                 assignToAnalystByGroupButton.click();
             });
