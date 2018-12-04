@@ -1,6 +1,6 @@
 app.custom.gridTasks = {
     built: false,
-	add: function add (gridData, field, type, name, template, callback) {
+    add: function add (gridData, field, type, name, template, callback) {
         var that = this,
             // Look for provided column in grid by field name
             taskColumn = $.grep(gridData.columns, function (colValue, colIndex) {
@@ -183,94 +183,93 @@ app.custom.gridTasks = {
 };
 
 app.events.subscribe('dynamicPageReady', function () {
-	console.log('dynamicPageReady Event', 'Triggered at ' + performance.now());
-	if (app.custom.gridTasks.built) {
-		return;
-	}
-	// Adding a grid style to Priority with different depending on value:
-	var gridData = $("div[data-role='grid']").data("kendoGrid");
-	console.log("grid", {
-		gridEle: $("div[data-role='grid']"),
-		gridData: $("div[data-role='grid']").data("kendoGrid")
-	});
-	app.custom.gridTasks.add(gridData, "Priority", "style", "", function (column) {
-		// Custom Priority Style Template
-		var template = " \
-			# if (!_.isUndefined(Priority)) { \
-				switch (Priority) { \
-					case \"4\": \
-						# # \
-						break; \
-					case \"3\": \
-						# background-color:rgba(0, 255, 0, 0.25); # \
-						break; \
-					case \"2\": \
-					case \"Medium\": \
-						# background-color:rgba(255, 255, 0, 0.25); # \
-						break; \
-					case \"1\": \
-					case \"High\": \
-						# background-color:rgba(255, 0, 0, 0.25); # \
-						break; \
-				} \
-			} #";    
-		return template;
-	});
+    console.log('dynamicPageReady Event', 'Triggered at ' + performance.now());
+    if (app.custom.gridTasks.built) {
+        return;
+    }
+   
+    var gridData = $("div[data-role='grid']").data("kendoGrid");
+    if (!_.isUndefined(gridData)) {
+         // Adding a grid style to Priority with different background color depending on value:
+         app.custom.gridTasks.add(gridData, "Priority", "style", "", function (column) {
+            // Custom Priority Style Template
+            var template = " \
+                # if (!_.isUndefined(Priority)) { \
+                    switch (Priority) { \
+                        case \"4\": \
+                            # # \
+                            break; \
+                        case \"3\": \
+                            # background-color:rgba(0, 255, 0, 0.25); # \
+                            break; \
+                        case \"2\": \
+                        case \"Medium\": \
+                            # background-color:rgba(255, 255, 0, 0.25); # \
+                            break; \
+                        case \"1\": \
+                        case \"High\": \
+                            # background-color:rgba(255, 0, 0, 0.25); # \
+                            break; \
+                    } \
+                } #";
+            return template;
+        });
 
-	if (session.user.Analyst) {
-		// Adding custom internal and external links to the Title column
-		app.custom.gridTasks.add(gridData, "Title", "task", "TitleLinks", function (column, task) {
-			console.log("test column", column);
-			// Custom Title Links Task Template
-			var template = " \
-				# var url = app.gridUtils.getLinkUrl(data, \"***\"); \
-				if (!_.isUndefined(WorkItemType) && (WorkItemType==='System.WorkItem.Incident' || WorkItemType==='System.WorkItem.ServiceRequest')) { #" +
-					app.custom.gridTasks.template.listItem.link(column.field, task.name, {
-						href: "#=url#"
-					}) +
-				"# } else if ((!_.isUndefined(WorkItemType)&& WorkItemType.indexOf('Activity') != -1)) { \
-					var approvalUrl = app.gridUtils.getApprovalLinkUrl(data); # " +
-					app.custom.gridTasks.template.listItem.link(column.field, task.name, {
-						icon: "fa-check",
-						href: "#=approvalUrl#"
-					}) + " \
-				# } # " +
-				app.custom.gridTasks.template.listItem.link(column.field, task.name, {
-					icon: "fa-arrow-right",
-					bClickPropagation: true,
-					className: "ra-highlight-default-icon",
-					href: "#=url#",
-					target: ""
-				});
-			return template;
-		}, function (data) {
-			console.log("TitleLinks Callback", data);
-		});
+        if (session.user.Analyst) {
+            // Adding custom internal and external links to the Title column
+            app.custom.gridTasks.add(gridData, "Title", "task", "TitleLinks", function (column, task) {
+                console.log("test column", column);
+                // Custom Title Links Task Template
+                var template = " \
+                    # var url = app.gridUtils.getLinkUrl(data, \"***\"); \
+                    if (!_.isUndefined(WorkItemType) && (WorkItemType==='System.WorkItem.Incident' || WorkItemType==='System.WorkItem.ServiceRequest')) { #" +
+                        app.custom.gridTasks.template.listItem.link(column.field, task.name, {
+                            href: "#=url#"
+                        }) +
+                    "# } else if ((!_.isUndefined(WorkItemType)&& WorkItemType.indexOf('Activity') != -1)) { \
+                        var approvalUrl = app.gridUtils.getApprovalLinkUrl(data); # " +
+                        app.custom.gridTasks.template.listItem.link(column.field, task.name, {
+                            icon: "fa-check",
+                            href: "#=approvalUrl#"
+                        }) + " \
+                    # } # " +
+                    app.custom.gridTasks.template.listItem.link(column.field, task.name, {
+                        icon: "fa-arrow-right",
+                        bClickPropagation: true,
+                        className: "ra-highlight-default-icon",
+                        href: "#=url#",
+                        target: ""
+                    });
+                return template;
+            }, function (data) {
+                console.log("TitleLinks Callback", data);
+            });
 
-		// Adding grid task to trigger AssignToAnalystByGroup
-		app.custom.gridTasks.add(gridData, "AssignedUser", "task", "AssignToAnalystByGroup", function (column, task) {
-			// Custom AssignToAnalystByGroup Task Template
-			var template = " \
-				# if (!_.isUndefined(WorkItemType) && (WorkItemType==='System.WorkItem.Incident' || WorkItemType==='System.WorkItem.ServiceRequest')) { #" +
-					app.custom.gridTasks.template.listItem.task(column.field, task.name, {
-						icon: "fa-pencil",
-						bClickPropagation: false
-					}) + " \
-				# } #";
-			return template;
-		}, function (data) {
-			console.log("AssignToAnalystByGroup Callback", data);
-			data.gridData.clearSelection();
-			data.gridData.select(data.itemRowEle);
+            // Adding grid task to trigger AssignToAnalystByGroup
+            app.custom.gridTasks.add(gridData, "AssignedUser", "task", "AssignToAnalystByGroup", function (column, task) {
+                // Custom AssignToAnalystByGroup Task Template
+                var template = " \
+                    # if (!_.isUndefined(WorkItemType) && (WorkItemType==='System.WorkItem.Incident' || WorkItemType==='System.WorkItem.ServiceRequest')) { #" +
+                        app.custom.gridTasks.template.listItem.task(column.field, task.name, {
+                            icon: "fa-pencil",
+                            bClickPropagation: false
+                        }) + " \
+                    # } #";
+                return template;
+            }, function (data) {
+                console.log("AssignToAnalystByGroup Callback", data);
+                data.gridData.clearSelection();
+                data.gridData.select(data.itemRowEle);
 
-			var assignToAnalystByGroupButton = $('li[data-bind*="click: analystByGroup"]').first();
+                var assignToAnalystByGroupButton = $('li[data-bind*="click: analystByGroup"]').first();
 
-			assignToAnalystByGroupButton.click();
-		});
-	}
+                assignToAnalystByGroupButton.click();
+            });
+        }
 
-	// Updating the grid to show our changes:
-	app.custom.gridTasks.updateGrid(gridData);
-	app.custom.gridTasks.built = true;
+        // Updating the grid to show our changes:
+        app.custom.gridTasks.updateGrid(gridData);
+        app.custom.gridTasks.built = true;
+    }
 });
 
