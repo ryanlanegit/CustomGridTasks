@@ -2,6 +2,17 @@
     Custom Grid Tasks
 */
 
+/* Targeting Specific Icons */
+/*
+a.ra-grid-task-icon i {
+    color: #FF0000;
+}
+
+a.ra-grid-task-icon i:hover {
+    color: #00FF00;
+}
+*/
+
 .k-grid tr:hover td.grid-highlight-column-last a:after,
 .k-grid tr:hover td.grid-highlight-column-title a:after,
 .k-grid .k-state-selected td.grid-highlight-column-last a:after,

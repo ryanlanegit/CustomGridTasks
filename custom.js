@@ -150,7 +150,7 @@ app.custom.gridTasks = {
                         #: " + column.field + " # \
                     </span> \
                 </div>";
-            return template;
+            return template.replace(/ {4}/g,"");
         },
         listItem : {
             task: function task (field, task, options) {
@@ -169,7 +169,7 @@ app.custom.gridTasks = {
                             <i class=\"fa " + properties.icon + "\"></i> \
                         </a> \
                     </li>";
-                return template;
+                return template.replace(/ {4}/g,"");
             },
             link: function link (field, task, options) {
                 var properties = {
@@ -190,7 +190,7 @@ app.custom.gridTasks = {
                             <i class=\"fa " + properties.icon + "\"></i> \
                         </a> \
                     </li>";
-                return template;
+                return template.replace(/ {4}/g,"");
             }
         }
     }
