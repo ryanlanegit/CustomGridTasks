@@ -8,20 +8,32 @@ app.custom.gridTasks = {
             })[0];
 
         if (!_.isUndefined(taskColumn)) {
-            if (_.isUndefined(taskColumn["style"])) {
+            if (_.isUndefined(taskColumn["_style"])) {
                 // Add default blank style template function to column template
-                taskColumn["style"] = function defaultStyle (data) { return ""; };
+                Object.defineProperty(
+                    taskColumn,
+                    "_style", {
+                    enumerable: false,
+                    writable: true,
+                    value: function defaultStyle (data) { return ""; }
+                });
             }
 
-            if (_.isUndefined(taskColumn["tasks"])) {
+            if (_.isUndefined(taskColumn["_tasks"])) {
                 // Add empty tasks array to column template
-                taskColumn["tasks"] = [];
+                Object.defineProperty(
+                    taskColumn,
+                    "_tasks", {
+                    enumerable: false,
+                    writable: true,
+                    value: []
+                });
             }
-
+            
             switch (type) {
                 case "style":
                     // Set style template function to provided template
-                    taskColumn["style"] = template
+                    taskColumn["_style"] = template
                     break
                 case "task":
                     var existingTask = that.get(gridData, field, name);
@@ -34,7 +46,7 @@ app.custom.gridTasks = {
                         });
                     } else {
                         // Add new task to the column template
-                        taskColumn["tasks"].push({
+                        taskColumn["_tasks"].push({
                             name : name,
                             template: template,
                             callback: callback
@@ -55,10 +67,10 @@ app.custom.gridTasks = {
         if (!_.isUndefined(taskColumn)) {
             if (_.isUndefined(name)) {
                 // Return all tasks for the provided field
-                return taskColumn["tasks"];
+                return taskColumn["_tasks"];
             } else {
                 // Look for the specific task named in the provided field
-                var gridTask = $.grep(taskColumn["tasks"], function (taskValue, taskIndex) {
+                var gridTask = $.grep(taskColumn["_tasks"], function (taskValue, taskIndex) {
                     return taskValue.name === name;
                 })[0];
 
@@ -107,7 +119,7 @@ app.custom.gridTasks = {
             bUpdateGridTemplate = false;
 
         $.each(gridData.columns, function (colIndex, column) {
-            if (!_.isUndefined(column["style"])) {
+            if (!_.isUndefined(column["_style"])) {
                 column.template = that.template.cell(column);
                 bUpdateGridTemplate = true;
             }
@@ -120,14 +132,16 @@ app.custom.gridTasks = {
 
             // Refresh grid to show column template changes
             gridData.refresh();
+
+            app.custom.gridTasks.built = true;
         }
     },
     template: {
         cell: function cell (column) {
             var template = " \
-                <div class=\"ra-grid-task-container\" style=\"" + column.style(column) + "\"> \
+                <div class=\"ra-grid-task-container\" style=\"" + column["_style"](column) + "\"> \
                     <ul class=\"ra-grid-task-menu\">";
-                        $.each(column["tasks"], function (taskIndex, task) {
+                        $.each(column["_tasks"], function (taskIndex, task) {
                             template += task.template(column, task);
                         });
                         template += " \
@@ -187,11 +201,11 @@ app.events.subscribe("dynamicPageReady", function () {
     if (app.custom.gridTasks.built) {
         return;
     }
-   
+
     var gridData = $("div[data-role='grid']").data("kendoGrid");
     if (!_.isUndefined(gridData)) {
          // Adding a grid style to Priority with different background color depending on value:
-         app.custom.gridTasks.add(gridData, "Priority", "style", "", function (column) {
+         app.custom.gridTasks.add(gridData, "Priority", "style", "", function () {
             // Custom Priority Style Template
             var template = " \
                 # if (!_.isUndefined(Priority)) { \
@@ -218,7 +232,6 @@ app.events.subscribe("dynamicPageReady", function () {
         if (session.user.Analyst) {
             // Adding custom internal and external links to the Title column
             app.custom.gridTasks.add(gridData, "Title", "task", "TitleLinks", function (column, task) {
-                console.log("test column", column);
                 // Custom Title Links Task Template
                 var template = " \
                     # var url = app.gridUtils.getLinkUrl(data, \"***\"); \
@@ -269,7 +282,6 @@ app.events.subscribe("dynamicPageReady", function () {
 
         // Updating the grid to show our changes:
         app.custom.gridTasks.updateGrid(gridData);
-        app.custom.gridTasks.built = true;
     }
 });
 
