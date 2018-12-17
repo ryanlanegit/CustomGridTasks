@@ -1,287 +1,221 @@
-app.custom.gridTasks = {
-    built: false,
-    add: function add (gridData, field, type, name, template, callback) {
-        var that = this,
-            // Look for provided column in grid by field name
-            taskColumn = $.grep(gridData.columns, function (colValue, colIndex) {
-                return colValue.field === field;
-            })[0];
+/*jslint nomen: true */
+/*global $, _, app, console, custom, pageForm, performance, require, session, store, window */
+/*eslint no-console: ["error", { allow: ["log", "warn", "error"] }] */
 
-        if (!_.isUndefined(taskColumn)) {
-            if (_.isUndefined(taskColumn["_style"])) {
-                // Add default blank style template function to column template
-                Object.defineProperty(
-                    taskColumn,
-                    "_style", {
-                    enumerable: false,
-                    writable: true,
-                    value: function defaultStyle (data) { return ""; }
-                });
-            }
+/**
+Custom
+**/
 
-            if (_.isUndefined(taskColumn["_tasks"])) {
-                // Add empty tasks array to column template
-                Object.defineProperty(
-                    taskColumn,
-                    "_tasks", {
-                    enumerable: false,
-                    writable: true,
-                    value: []
-                });
-            }
-            
-            switch (type) {
-                case "style":
-                    // Set style template function to provided template
-                    taskColumn["_style"] = template
-                    break
-                case "task":
-                    var existingTask = that.get(gridData, field, name);
-                    if (existingTask) {
-                        // Merge new task with existing one in the column template
-                        $.extend(existingTask, {
-                            name : name,
-                            template: template,
-                            callback: callback
-                        });
-                    } else {
-                        // Add new task to the column template
-                        taskColumn["_tasks"].push({
-                            name : name,
-                            template: template,
-                            callback: callback
-                        });
-                    }
-                    break;
-            }
-        } else {
-            console.log("gridTasks:add", "Warning! Unable to find field '" + field + "'.");
+/*
+    Custom Session Debugging
+*/
+app.storage.custom = store.namespace("custom");
+// app.storage.custom.set("debug", true); // Enable DEBUG Mode via Console/Script/Plugin
+// app.storage.custom.set("debug", false); // Disable DEBUG Mode via Console/Script/Plugin
+
+if (app.storage.custom.get("debug")) {
+    console.log("DEBUG Mode Enabled", performance.now());
+    (function () {
+        function debugEventSubscriber (e) {
+            "use strict";
+            console.log(e.type, {
+                "performance": performance.now(),
+                "event": e
+            });
         }
-    },
-    get: function get (gridData, field, name) {
-        // Look for provided column in grid by field name
-        var taskColumn = $.grep(gridData.columns, function (colValue, colIndex) {
-            return colValue.field === field;
-        })[0];
+        
+        var debugEvents = [
+			"dynamicPageReady",
+            "sessionStorageReady",
+            "requirejsReady",
+			"gridTasksReady"
+        ];
+        _.each(debugEvents, function (debugEvent) {
+            app.events.subscribe(debugEvent, debugEventSubscriber);
+        });
+    } ());
+}
 
-        if (!_.isUndefined(taskColumn)) {
-            if (_.isUndefined(name)) {
-                // Return all tasks for the provided field
-                return taskColumn["_tasks"];
-            } else {
-                // Look for the specific task named in the provided field
-                var gridTask = $.grep(taskColumn["_tasks"], function (taskValue, taskIndex) {
-                    return taskValue.name === name;
-                })[0];
-
-                if (!_.isUndefined(gridTask)) {
-                    // Return the specific task in the provided field
-                    return gridTask;
-                } else {
-                    console.log("gridTasks:get", "Warning! Unable to find task '" + name + "' in field '" + field + "'.");
-                    return null;
-                }
-            }
-        } else {
-            console.log("gridTasks:get", "Warning! Unable to find field '" + field + "'.");
-            return null;
+/*
+    Custom Utilities
+*/
+app.custom.utils = {
+    "getCachedScript" : function getCachedScript(url, options) {
+        "use strict";
+        if (app.storage.custom.get("debug")) {
+            console.log("getCachedScript", url);
         }
-    },
-    callback: function callback (itemEle, bClickPropagation) { // item is the task element clicked, bClickPropagation determines if click event should propagate
-        var that = this,
-            item = $(itemEle),
-            gridData = item.closest("div[data-role='grid']").data("kendoGrid"),
-            itemData = item.data(),
-            itemRowEle = item.closest("tr").get(0),
-            dataItem = gridData.dataItem(itemRowEle),
-            data = {
-                gridData: gridData,
-                itemRowEle: itemRowEle,
-                dataItem: dataItem,
-                itemData: itemData
-            }
-
-        console.log("gridTasks:callback", data);
-
-        var existingTask = that.get(gridData, itemData.field, itemData.task);
-        if (existingTask) {
-            // Stop click propagation for jQuery click events if requested
-            if (!bClickPropagation) {
-                event.stopPropagation();
-            }
-            existingTask.callback(data);
-        } else {
-            console.log("gridTasks:callback", "Unable to find task for callback.");
-        }
-    },
-    updateGrid: function (gridData) {
-        var that = this,
-            bUpdateGridTemplate = false;
-
-        $.each(gridData.columns, function (colIndex, column) {
-            if (!_.isUndefined(column["_style"])) {
-                column.template = that.template.cell(column);
-                bUpdateGridTemplate = true;
-            }
+        options = $.extend(options || {}, {
+            dataType: "script",
+            cache: true,
+            url: url
         });
 
-        if (bUpdateGridTemplate) {
-            // Update grid row templates if custom tasks/styles are added
-            gridData.rowTemplate = gridData._tmpl(gridData.options.rowTemplate, gridData.columns);
-            gridData.altRowTemplate = gridData._tmpl(gridData.options.rowTemplate, gridData.columns);
-
-            // Refresh grid to show column template changes
-            gridData.refresh();
-
-            app.custom.gridTasks.built = true;
-        }
+        return $.ajax(options);
     },
-    template: {
-        cell: function cell (column) {
-            var template = " \
-                <div class=\"ra-grid-task-container\" style=\"" + column["_style"](column) + "\"> \
-                    <ul class=\"ra-grid-task-menu\">";
-                        $.each(column["_tasks"], function (taskIndex, task) {
-                            template += task.template(column, task);
-                        });
-                        template += " \
-                    </ul> \
-                    <span class=\"ra-grid-task-content\"> \
-                        #: " + column.field + " # \
-                    </span> \
-                </div>";
-            return template.replace(/ {4}/g,"");
-        },
-        listItem : {
-            task: function task (field, task, options) {
-                var properties = {
-                    field: field,
-                    task: task,
-                    icon: "fa-pencil",
-                    bClickPropagation: true
-                };
 
-                $.extend(properties, options);
-
-                var template = " \
-                    <li class=\"ra-grid-task-item\" data-task=\"" + properties.task + "\" data-field=\"" + properties.field + "\" onclick=\"app.custom.gridTasks.callback(this, " + properties.bClickPropagation + ");\"> \
-                        <a class=\"ra-icon ra-grid-task-icon\"> \
-                            <i class=\"fa " + properties.icon + "\"></i> \
-                        </a> \
-                    </li>";
-                return template.replace(/ {4}/g,"");
-            },
-            link: function link (field, task, options) {
-                var properties = {
-                    field: field,
-                    task: task,
-                    icon: "fa-external-link",
-                    bClickPropagation: false,
-                    className: "",
-                    href: "/",
-                    target: "_blank"
-                }
-
-                $.extend(properties, options);
-
-                var template = " \
-                    <li class=\"ra-grid-task-item " + properties.className + "\" data-task=\"" + properties.task + "\" data-field=\"" + field + "\" onclick=\"app.custom.gridTasks.callback(this, " + properties.bClickPropagation + ");\"> \
-                        <a class=\"ra-icon ra-grid-task-icon\" href=\"" + properties.href + "\" target=\"" + properties.target + "\" > \
-                            <i class=\"fa " + properties.icon + "\"></i> \
-                        </a> \
-                    </li>";
-                return template.replace(/ {4}/g,"");
-            }
+    "getCSS" : function getCSS(url) {
+        "use strict";
+        if (app.storage.custom.get("debug")) {
+            console.log("getCSS", url);
         }
+        return $("<link>", {
+            type: "text/css",
+            rel: "stylesheet",
+            href: url
+        }).appendTo("head");
+    },
+
+    "isGuid": function isGuid(string) {
+        "use strict";
+        if (string[0] === "{") {
+            string = string.substring(1, string.length - 1);
+        }
+        var regexGuid = /^(\{){0,1}[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}(\}){0,1}$/gi;
+        return regexGuid.test(string);
+    },
+
+    "sortList" : function sortList(ulElement) {
+        "use strict";
+        if (app.storage.custom.get("debug")) {
+            console.log("sortList", ulElement);
+        }
+        ulElement = $(ulElement);
+
+        var listitems = ulElement.children("li").get();
+        listitems.sort(function (a, b) {
+            return $(a).text().toUpperCase().localeCompare($(b).text().toUpperCase());
+        });
+        _.each(listitems, function (listItem) { ulElement.append(listItem); });
+    },
+
+    "stringFormat" : function stringFormat(format) {
+        "use strict";
+        var args = Array.prototype.slice.call(arguments, 1);
+        return format.replace(/\{(\d+)\}/g, function (match, number) {
+            return typeof args[number] !== "undefined" ? args[number] : match;
+        });
     }
 };
 
-app.events.subscribe("dynamicPageReady", function () {
-    console.log("dynamicPageReady Event", "Triggered at " + performance.now());
-    if (app.custom.gridTasks.built) {
-        return;
+/*
+	Load Custom Scripts When Needed
+*/
+if (
+	window.location.href.indexOf("ServiceCatalog/RequestOffering") === -1 &&
+	window.location.href.indexOf("/Edit/") === -1
+) {
+    if (app.storage.custom.get("debug")) {
+        console.log("Load GridTasks On RequireJS Ready", performance.now());
     }
+    
+    app.events.subscribe("requirejsReady", function () {
+        app.custom.utils.getCachedScript("/CustomSpace/Scripts/grids/gridTaskMain-built.min.js");
+    });
+	
+	/*
+		Custom Grid Tasks
+	*/
+	app.events.subscribe("gridTasksReady", function () {
+		var gridData = $("div[data-role='grid']").data("kendoGrid");
+		if (!_.isUndefined(gridData)) {
+			// Adding background colors to the Priority column based on value.
+			app.custom.gridTasks.add(gridData, "Priority", "style", "", function () {
+				// Custom Priority Style Template
+				var template = " \
+					# if (!_.isUndefined(Priority)) { \
+						switch (Priority) { \
+							case \"4\": \
+								# # \
+								break; \
+							case \"3\": \
+								# background-color:rgba(0, 255, 0, 0.25); # \
+								break; \
+							case \"2\": \
+							case \"Medium\": \
+								# background-color:rgba(255, 255, 0, 0.25); # \
+								break; \
+							case \"1\": \
+							case \"High\": \
+								# background-color:rgba(255, 0, 0, 0.25); # \
+								break; \
+						} \
+					} #";
+				return template;
+			});
 
-    var gridData = $("div[data-role='grid']").data("kendoGrid");
-    if (!_.isUndefined(gridData)) {
-         // Adding a grid style to Priority with different background color depending on value:
-         app.custom.gridTasks.add(gridData, "Priority", "style", "", function () {
-            // Custom Priority Style Template
-            var template = " \
-                # if (!_.isUndefined(Priority)) { \
-                    switch (Priority) { \
-                        case \"4\": \
-                            # # \
-                            break; \
-                        case \"3\": \
-                            # background-color:rgba(0, 255, 0, 0.25); # \
-                            break; \
-                        case \"2\": \
-                        case \"Medium\": \
-                            # background-color:rgba(255, 255, 0, 0.25); # \
-                            break; \
-                        case \"1\": \
-                        case \"High\": \
-                            # background-color:rgba(255, 0, 0, 0.25); # \
-                            break; \
-                    } \
-                } #";
-            return template;
-        });
+			// Adding custom internal and external links to the Title column with dynamic template and no callback.
+			app.custom.gridTasks.add(gridData, "Title", "task", "TitleLinks", function (column, task) {
+				// Custom Title Links Task Template
+				var template = " \
+					# var url = app.gridUtils.getLinkUrl(data, \"***\"); \
+					if (!_.isUndefined(WorkItemType) && (WorkItemType==='System.WorkItem.Incident' || WorkItemType==='System.WorkItem.ServiceRequest')) { #" +
+						app.custom.gridTasks.template.listItem.link(column.field, task.name, {
+							href: "#=url#"
+						}) +
+					"# } else if ((!_.isUndefined(WorkItemType)&& WorkItemType.indexOf('Activity') != -1)) { \
+						var approvalUrl = app.gridUtils.getApprovalLinkUrl(data); # " +
+						app.custom.gridTasks.template.listItem.link(column.field, task.name, {
+							icon: "fa-check",
+							href: "#=approvalUrl#"
+						}) + " \
+					# } # " +
+					app.custom.gridTasks.template.listItem.link(column.field, task.name, {
+						icon: "fa-arrow-right",
+						bClickPropagation: true,
+						className: "ra-highlight-default-icon",
+						href: "#=url#",
+						target: ""
+					});
+				return template;
+			});
 
-        if (session.user.Analyst) {
-            // Adding custom internal and external links to the Title column
-            app.custom.gridTasks.add(gridData, "Title", "task", "TitleLinks", function (column, task) {
-                // Custom Title Links Task Template
-                var template = " \
-                    # var url = app.gridUtils.getLinkUrl(data, \"***\"); \
-                    if (!_.isUndefined(WorkItemType) && (WorkItemType==='System.WorkItem.Incident' || WorkItemType==='System.WorkItem.ServiceRequest')) { #" +
-                        app.custom.gridTasks.template.listItem.link(column.field, task.name, {
-                            href: "#=url#"
-                        }) +
-                    "# } else if ((!_.isUndefined(WorkItemType)&& WorkItemType.indexOf('Activity') != -1)) { \
-                        var approvalUrl = app.gridUtils.getApprovalLinkUrl(data); # " +
-                        app.custom.gridTasks.template.listItem.link(column.field, task.name, {
-                            icon: "fa-check",
-                            href: "#=approvalUrl#"
-                        }) + " \
-                    # } # " +
-                    app.custom.gridTasks.template.listItem.link(column.field, task.name, {
-                        icon: "fa-arrow-right",
-                        bClickPropagation: true,
-                        className: "ra-highlight-default-icon",
-                        href: "#=url#",
-                        target: ""
-                    });
-                return template;
-            }, function (data) {
-                console.log("TitleLinks Callback", data);
-            });
+			if (session.user.Analyst) {
+				// Adding grid task to trigger AssignToAnalystByGroup with dynamic template and custom callback
+				app.custom.gridTasks.add(gridData, "AssignedUser", "task", "AssignToAnalystByGroup", function (column, task) {
+					// Custom AssignToAnalystByGroup Task Template
+					var template = " \
+						# if (!_.isUndefined(WorkItemType) && (WorkItemType==='System.WorkItem.Incident' || WorkItemType==='System.WorkItem.ServiceRequest')) { #" +
+							app.custom.gridTasks.template.listItem.task(column.field, task.name, {
+								icon: "fa-pencil",
+								bClickPropagation: false
+							}) + " \
+						# } #";
+					return template;
+				}, function (data) {
+					console.log("AssignToAnalystByGroup:callback", data);
+					data.gridData.clearSelection();
+					data.gridData.select(data.itemRowEle);
 
-            // Adding grid task to trigger AssignToAnalystByGroup
-            app.custom.gridTasks.add(gridData, "AssignedUser", "task", "AssignToAnalystByGroup", function (column, task) {
-                // Custom AssignToAnalystByGroup Task Template
-                var template = " \
-                    # if (!_.isUndefined(WorkItemType) && (WorkItemType==='System.WorkItem.Incident' || WorkItemType==='System.WorkItem.ServiceRequest')) { #" +
-                        app.custom.gridTasks.template.listItem.task(column.field, task.name, {
-                            icon: "fa-pencil",
-                            bClickPropagation: false
-                        }) + " \
-                    # } #";
-                return template;
-            }, function (data) {
-                console.log("AssignToAnalystByGroup Callback", data);
-                data.gridData.clearSelection();
-                data.gridData.select(data.itemRowEle);
+					var assignToAnalystByGroupButton = $("li[data-bind*='click: analystByGroup']").first();
 
-                var assignToAnalystByGroupButton = $("li[data-bind*='click: analystByGroup']").first();
+					assignToAnalystByGroupButton.click();
+				});
+			}
 
-                assignToAnalystByGroupButton.click();
-            });
+			app.custom.gridTasks.updateGrid(gridData);
+		}
+	});
+}
+
+/*
+    Javascript Library Monitoring
+*/
+if (!_.isUndefined(window.requirejs)) {
+    app.events.publish("requirejsReady");
+} else {
+    Object.defineProperty(window, "requirejs", {
+        configurable: true,
+        enumerable: true,
+        writeable: true,
+        get: function () {
+            "use strict";
+            return this._requirejs;
+        },
+        set: function (val) {
+            "use strict";
+            this._requirejs = val;
+            app.events.publish("requirejsReady");
         }
-
-        // Updating the grid to show our changes:
-        app.custom.gridTasks.updateGrid(gridData);
-    }
-});
-
+    });
+}

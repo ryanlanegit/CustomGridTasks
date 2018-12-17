@@ -1,0 +1,8 @@
+<div class="ra-grid-task-container" style="<%= _style().replace(/ {4}/g,"") %>">
+    <ul class="ra-grid-task-menu">
+        <% _.forEach(_tasks, function (task) { %>
+            <%= task.template(obj, task).replace(/ {4}/g,"") %>
+        <% }) %>
+    </ul>
+    <span class="ra-grid-task-content">#: <%= field %> #</span>
+</div>
