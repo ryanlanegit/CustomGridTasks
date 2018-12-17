@@ -7,13 +7,13 @@ Custom Grid Task Builder
 **/
 
 define([
-	"text!CustomSpace/Scripts/grids/tasks/view.html",
-	"text!CustomSpace/Scripts/grids/tasks/listItemTask.html",
-	"text!CustomSpace/Scripts/grids/tasks/listItemLink.html"
+    "text!CustomSpace/Scripts/grids/tasks/view.html",
+    "text!CustomSpace/Scripts/grids/tasks/listItemTask.html",
+    "text!CustomSpace/Scripts/grids/tasks/listItemLink.html"
 ], function (
-	cellTemplate,
-	listItemTaskTemplate,
-	listItemLinkTemplate
+    cellTemplate,
+    listItemTaskTemplate,
+    listItemLinkTemplate
 ) {
     if (app.storage.custom.get("debug")) {
         console.log("gridTaskBuilder:define", {
@@ -23,15 +23,15 @@ define([
         });
     }
 
-	var definition = {
-		"built": false,
-		"build": function build(callback){
-			if (app.storage.custom.get("debug")) {
-				console.log("gridTaskBuilder:build");
-			}
-			/* BEGIN Functions */
-			function getGridTaskViewModel() {
-				var gridTaskVm = new kendo.observable({
+    var definition = {
+        "built": false,
+        "build": function build(callback){
+            if (app.storage.custom.get("debug")) {
+                console.log("gridTaskBuilder:build");
+            }
+            /* BEGIN Functions */
+            function getGridTaskViewModel() {
+                var gridTaskVm = new kendo.observable({
                     "add": function add (gridData, field, type, name, template, callback) {
                         var that = this,
                             // Look for provided column in grid by field name
@@ -174,72 +174,72 @@ define([
                         }
                     },
                     "template": {
-						"cell": function cell(column) {
+                        "cell": function cell(column) {
                             return buildTemplate.cell(column);
                         },
-						"listItem": {
-							"link": function link(field, task, options) {
-								return buildTemplate.link(field, task, options);
-							},
-							"task": function task(field, task, options) {
-								return buildTemplate.task(field, task, options);
-							}
-						}
-					}
-				});
+                        "listItem": {
+                            "link": function link(field, task, options) {
+                                return buildTemplate.link(field, task, options);
+                            },
+                            "task": function task(field, task, options) {
+                                return buildTemplate.task(field, task, options);
+                            }
+                        }
+                    }
+                });
 
-				return gridTaskVm;
-			}
+                return gridTaskVm;
+            }
 
-			//template .build() based on grid html templates
-			var buildTemplate = {
-				"cell": function cell (column) {
-					var builtCell = _.template(cellTemplate);
-					return builtCell(column);
-				},
-				"link": function link (field, task, options) {
-					var properties = {
-						field: field,
-						task: task,
-						icon: "fa-external-link",
-						bClickPropagation: false,
-						className: "",
-						href: "/",
-						target: "_blank"
-					},
-						builtLink = _.template(listItemLinkTemplate);
+            //template .build() based on grid html templates
+            var buildTemplate = {
+                "cell": function cell (column) {
+                    var builtCell = _.template(cellTemplate);
+                    return builtCell(column);
+                },
+                "link": function link (field, task, options) {
+                    var properties = {
+                        field: field,
+                        task: task,
+                        icon: "fa-external-link",
+                        bClickPropagation: false,
+                        className: "",
+                        href: "/",
+                        target: "_blank"
+                    },
+                        builtLink = _.template(listItemLinkTemplate);
 
-					$.extend(properties, options);
-					return builtLink(properties);
-				},
-				"task": function task (field, task, options) {
-					var properties = {
-						field: field,
-						task: task,
-						icon: "fa-pencil",
-						bClickPropagation: true
-					},
-						builtTask = _.template(listItemTaskTemplate);
+                    $.extend(properties, options);
+                    return builtLink(properties);
+                },
+                "task": function task (field, task, options) {
+                    var properties = {
+                        field: field,
+                        task: task,
+                        icon: "fa-pencil",
+                        bClickPropagation: true
+                    },
+                        builtTask = _.template(listItemTaskTemplate);
 
-					$.extend(properties, options);
-					return builtTask(properties);
-				}
-			}
-			/* END Functions */
+                    $.extend(properties, options);
+                    return builtTask(properties);
+                }
+            }
+            /* END Functions */
 
-			/* Initialization Code */
-			function initGridTask() {
-				var gridTaskViewModel = getGridTaskViewModel();
-				app.custom.gridTasks = gridTaskViewModel;
+            /* Initialization Code */
+            function initGridTask() {
+                var gridTaskViewModel = getGridTaskViewModel();
+                app.custom.gridTasks = gridTaskViewModel;
 
                 if (typeof callback === "function") {
                     callback(gridTaskViewModel);
                 }
-			}
+            }
 
-			initGridTask();
-		}
-	}
+            initGridTask();
+        }
+    }
 
-	return definition
+    return definition
 });
